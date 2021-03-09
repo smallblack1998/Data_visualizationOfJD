@@ -28,13 +28,15 @@ async function getProAndMerName(httpUrl) {
     const res = await axios.get(httpUrl, options1);
     const $ = cheerio.load(res.data);
     let proName = $('.parameter2>li').attr('title');
+    //将多个空格转换为一个空格
     proName = proName.replace(/\s+/g, $1 => {
         if ($1.length > 1) {
             return ' ';
         }
         return $1;
     });
-    const merName = $('.EDropdown .name a').text();
+    let merName = $('.head a:first').text();
+    merName = merName.replace(/（.+）/, '');
     return { proName, merName }
 }
 async function getOtherMessage(httpUrl) {
@@ -42,7 +44,7 @@ async function getOtherMessage(httpUrl) {
     // 解决中文乱码
     let data = iconv.decode(Buffer.from(res.data), 'gbk');
     // data = iconv.encode(data, 'utf8').toString();
-    console.log(data);
+    // console.log(data);
     let productCS = data.match(/"productCommentSummary":{(.*?)}/)[1];
     let hotCommentTS = data.match(/"hotCommentTagStatistics":\[(.*?)\]/)[1];
 
@@ -54,5 +56,4 @@ async function getOtherMessage(httpUrl) {
 
     return data;
 }
-
 module.exports = { getProAndMerName, getOtherMessage };

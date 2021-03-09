@@ -55,9 +55,9 @@ puppeteer.launch(options).then(async browser => {
     // 能拿到好评率，评价信息，具体销量值
     // https://club.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98&productId=100016813970&score=0&sortType=5&page=0&pageSize=10&isShadowSku=0&fold=1
 
-    // 商家销量排行(JD)
+    // 品牌销量排行(JD)
     const merchantData = {};
-    // 商家销售额排行(JD)
+    // 品牌销售额排行(JD)
     const merchantSalesData = {};
     // 商品销量排行(JD)
     const productData = {};
@@ -98,21 +98,24 @@ puppeteer.launch(options).then(async browser => {
     let [prourlArr, moneyArr] = data;
 
     for (let i = 0; i < prourlArr.length; i++) {
-        await sleep(0.5 * i);
+        await sleep(0.2 * i);
         // productId
         const productId = prourlArr[i].match(/(\d+)\.html/)[1];
         // 金额
         const money = moneyArr[i];
-        // 获取商家名和商品名
+        // 获取品牌名和商品名
         const ProAndMerName = await getProAndMerName(prourlArr[i]);
         // 获取剩下的其他信息
         const otherMesObj = await getOtherMessage(`https://club.jd.com/comment/productPageComments.action?callback=fetchJSON_comment98&productId=${productId}&score=0&sortType=5&page=0&pageSize=10&isShadowSku=0&fold=1`)
-        // 商家名
+        // 品牌名
         const merchantName = ProAndMerName.merName;
         // 商品名
         const proName = ProAndMerName.proName;
         // 销量
-        const sales = otherMesObj.productCommentSummary.commentCount;
+        let sales = otherMesObj.productCommentSummary.commentCountStr;
+        sales.replace(/(\d+)\u4e07|\d+/g, ($1, $2) => {
+            sales = $2 ? $2 * 10000 : $1 * 1;
+        })
         // // 好评度
         const goodRate = otherMesObj.productCommentSummary.goodRateShow;
         otherMesObj.hotCommentTagStatistics.forEach((item, index) => {
@@ -120,24 +123,27 @@ puppeteer.launch(options).then(async browser => {
             const name = item.name;
             // 评价内容的数量
             const count = item.count;
-            // 评价大杂烩 评价的内容以及对应的数量
+            // 评价大杂烩 评价的内容以及对应的数量 -- 饼图自定义样式
             createDataObj(comment, name, count);
         });
-        // 商家销量排行(JD) 商家名 销量
-        createDataObj(merchantData, merchantName, sales); // sales
-        // 商家销售额排行(JD) 销量乘以金额 商家名
+        // 品牌销量排行(JD) 商家名 销量  横柱状图
+        createDataObj(merchantData, merchantName, sales);
+        // 商家销量最高的商品和最低的商品 两个折线图
+        // 品牌销售额排行(JD) 销量乘以金额 商家名
         createDataObj(merchantSalesData, merchantName, sales * money);
-        // 商品销量排行(JD) 商品名 销量
+        // 商品销量Top20(JD) 商品名 销量 竖柱状图
         createDataObj(productData, proName, sales);
+        // 如果能获取到具体的销量数据那就可以做每个分钟的手机销量图 时间 销量
         // 商品销售额排行(JD) 销量乘以金额 商品名
         createDataObj(productSalesData, proName, sales * money);
         // 商品好评度(Top10) 商品名 好评度
         createDataObj(goodRateData, proName, goodRate);
-        console.log(merchantName, proName, sales, money, goodRate);
+        // console.log(merchantName, proName, sales, money, goodRate);
     }
     const nameArr = ["merchantData", "merchantSalesData", "productData", "productSalesData", "goodRateData", "comment"];
     const dataArr = [merchantData, merchantSalesData, productData, productSalesData, goodRateData, comment];
     dataArr.forEach((item, index) => {
         writeData(item, `../data/${nameArr[index]}.json`)
     });
+    console.log('sc end');
 })
